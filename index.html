@@ -1,0 +1,272 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Кабачешеринг</title>
+    <style>
+        @font-face {
+            font-family: 'CustomFont';
+            src: url('font.ttf') format('truetype');
+        }
+
+        body {
+            background-color: white;
+            color: black;
+            font-family: sans-serif;
+            margin: 0;
+            padding: 0;
+            text-align: center;
+        }
+
+        header {
+            background-color: white;
+            padding: 20px 0;
+            text-align: center;
+            position: relative;
+        }
+
+        h1 {
+            font-family: 'CustomFont', sans-serif;
+            margin: 0;
+        }
+
+        #logo {
+            width: 300px;
+            height: 300px;
+        }
+
+        .container {
+            padding: 20px;
+        }
+
+        input[type="range"] {
+            width: 80%;
+        }
+
+        button {
+            background-color: black;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            cursor: pointer;
+            margin: 10px;
+        }
+
+        #result {
+            margin-top: 20px;
+            font-size: 24px;
+            font-weight: bold;
+        }
+
+        footer {
+            position: fixed;
+            bottom: 0;
+            left: 0;
+            width: 100%;
+            background-color: white;
+            padding: 10px 0;
+            text-align: center;
+        }
+
+        footer button {
+            margin: 0 10px;
+        }
+
+        /* Стили для попапа с сообщениями */
+        #notificationPopup {
+            position: fixed;
+            top: 80px;
+            right: 20px;
+            background-color: white;
+            border: 1px solid #ccc;
+            box-shadow: 2px 2px 5px rgba(0, 0, 0, 0.2);
+            max-width: 300px;
+            display: none;
+        }
+
+        .message {
+            padding: 10px;
+            border-bottom: 1px solid #eee;
+            cursor: pointer;
+        }
+
+        .message:last-child {
+            border-bottom: none;
+        }
+
+        /* Стили для красной точки уведомления */
+        #notificationDot {
+            position: absolute;
+            top: 5px;
+            right: 10px;
+            width: 8px;
+            height: 8px;
+            background-color: red;
+            border-radius: 50%;
+            display: none;
+        }
+    </style>
+    <script>
+        Telegram.WebApp.ready();
+        Telegram.WebApp.setHeaderColor('bg_color', '#ffffff');
+        Telegram.WebApp.setBackgroundColor('bg_color', '#ffffff');
+
+        function getRandomInt(min, max) {
+            return Math.floor(Math.random() * (max - min + 1)) + min;
+        }
+
+        function showMainInterface() {
+            document.getElementById('registration').style.display = 'none';
+            document.getElementById('main').style.display = 'block';
+        }
+
+        function calculatePoints(respect, need) {
+            let points = (respect * need) / 5;
+            points = Math.max(Math.min(Math.round(points), 200), 2);
+            Telegram.WebApp.CloudStorage.setItem('points', points);
+            document.getElementById('balance').textContent = points;
+            showMainInterface();
+        }
+
+        document.getElementById('registration-form').addEventListener('submit', function(event) {
+            event.preventDefault();
+            let respect = parseInt(document.getElementById('respect').value, 10);
+            let need = parseInt(document.getElementById('need').value, 10);
+            calculatePoints(respect, need);
+        });
+
+        document.getElementById('bet-yes').addEventListener('click', function() {
+            makeBet(true);
+        });
+
+        document.getElementById('bet-no').addEventListener('click', function() {
+            makeBet(false);
+        });
+
+        function makeBet(userChoice) {
+            let betAmount = parseInt(document.getElementById('bet-amount').value, 10);
+            let points = parseInt(Telegram.WebApp.CloudStorage.getItem('points'), 10) || 0;
+
+            if (betAmount <= points && betAmount >= 10 && betAmount <= 1000) {
+                let result = Math.random() < 0.5;
+
+                setTimeout(function() {
+                    if (userChoice === result) {
+                        points += betAmount;
+                        document.getElementById('result').textContent = 'Вы угадали! + ' + betAmount + ' очков!';
+                    } else {
+                        points -= betAmount;
+                        document.getElementById('result').textContent = 'Вы не угадали! - ' + betAmount + ' очков!';
+                    }
+
+                    Telegram.WebApp.CloudStorage.setItem('points', points);
+                    document.getElementById('balance').textContent = points;
+                }, 3000);
+            } else {
+                alert('Неверная сумма ставки!');
+            }
+        }
+
+        function showNotification(message) {
+            let notificationPopup = document.getElementById('notificationPopup');
+            let messageElement = document.createElement('div');
+            messageElement.classList.add('message');
+            messageElement.textContent = message;
+            messageElement.addEventListener('click', function() {
+                notificationPopup.removeChild(messageElement);
+                if (notificationPopup.children.length === 0) {
+                    document.getElementById('notificationDot').style.display = 'none';
+                }
+            });
+            notificationPopup.appendChild(messageElement);
+            notificationPopup.style.display = 'block';
+            document.getElementById('notificationDot').style.display = 'block';
+        }
+
+        let messages = [
+            'Баклажан Вася хочет познакомиться!',
+            'Баклажан Света шлет вам привет!',
+            'Баклажан Петя зовет вас на свидание!'
+        ];
+
+        setInterval(function() {
+            let points = parseInt(Telegram.WebApp.CloudStorage.getItem('points'), 10) || 0;
+            let messagesPerHour = 0;
+
+            if (points < 100) {
+                messagesPerHour = 0;
+            } else if (points < 1000) {
+                messagesPerHour = 1;
+            } else if (points < 10000) {
+                messagesPerHour = 4;
+            } else if (points < 20000) {
+                messagesPerHour = 10;
+            } else if (points < 50000) {
+                messagesPerHour = 20;
+            } else if (points < 100000) {
+                messagesPerHour = 100;
+            } else {
+                messagesPerHour = 240;
+            }
+
+            if (messagesPerHour > 0 && Math.random() < messagesPerHour / 3600) {
+                let randomMessage = messages[Math.floor(Math.random() * messages.length)];
+                showNotification(randomMessage);
+            }
+        }, 1000);
+
+        if (Telegram.WebApp.CloudStorage.getItem('points') === null) {
+            document.getElementById('registration').style.display = 'block';
+        } else {
+            showMainInterface();
+        }
+    </script>
+</head>
+<body>
+    <header>
+        <h1>Kabacheshering</h1>
+        <div id="notificationDot"></div>
+        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-bell">
+            <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"></path>
+            <path d="M13.73 21a2 2 0 0 1-3.46 0"></path>
+        </svg>
+    </header>
+
+    <div id="notificationPopup"></div>
+
+    <div id="registration" style="display: none;">
+        <form id="registration-form">
+            <div class="container">
+                <label for="respect">Насколько вы уважаете кабачки (1-100):</label><br>
+                <input type="range" id="respect" name="respect" min="1" max="100"><br>
+
+                <label for="need">Насколько вы нуждаетесь в кабачках (1-100):</label><br>
+                <input type="range" id="need" name="need" min="1" max="100"><br><br>
+
+                <button type="submit">Отправить</button>
+            </div>
+        </form>
+    </div>
+
+    <div id="main" style="display: none;">
+        <img id="logo" src="logo.png" alt="Логотип">
+        <p>Ваш баланс: <span id="balance">0</span> очков</p>
+
+        <div id="earn">
+            <h2>Сделайте ставку!</h2>
+            <button id="bet-yes">Ест</button>
+            <button id="bet-no">Не ест</button>
+            <br>
+            <label for="bet-amount">Сумма ставки:</label>
+            <input type="number" id="bet-amount" value="10" min="10" max="1000">
+            <div id="result"></div>
+        </div>
+    </div>
+
+    <footer>
+        <button onclick="window.location.reload()">Home</button>
+        <button onclick="document.getElementById('earn').scrollIntoView()">Earn</button>
+    </footer>
+</body>
+</html>
